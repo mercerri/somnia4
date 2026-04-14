@@ -895,6 +895,13 @@
    DATA LAYER
 ════════════════════════════════════════════════════ */
 const STORAGE_KEY = 'somnia_entries';
+const ONBOARD_KEY = 'somnia_onboarded';
+
+/* ─── SVG constants — declared first so chart functions always have them ─── */
+var W = 380, H = 200;
+var PAD = { top: 16, right: 16, bottom: 28, left: 36 };
+var CW = W - PAD.left - PAD.right;
+var CH = H - PAD.top - PAD.bottom;
 
 /** Retrieve all entries from localStorage */
 function getEntries() {
@@ -952,11 +959,6 @@ function seedSampleData() {
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
 }
-
-/* ════════════════════════════════════════════════════
-   FIRST-TIME FLOW
-════════════════════════════════════════════════════ */
-const ONBOARD_KEY = 'somnia_onboarded';
 
 /* ════════════════════════════════════════════════════
    STARFIELD
@@ -1083,8 +1085,8 @@ function resetOnboardingState() {
 })();
 
 // Hours slider → live display
-const hoursSlider = document.getElementById('f-hours');
-const hoursDisplay = document.getElementById('hours-display');
+var hoursSlider = document.getElementById('f-hours');
+var hoursDisplay = document.getElementById('hours-display');
 hoursSlider.addEventListener('input', () => {
   hoursDisplay.textContent = parseFloat(hoursSlider.value).toFixed(1);
   // Update fill
@@ -1164,7 +1166,7 @@ function showToast(msg) {
 /* ════════════════════════════════════════════════════
    TOOLTIP UTILITY
 ════════════════════════════════════════════════════ */
-const tooltip = document.getElementById('tooltip');
+var tooltip = document.getElementById('tooltip');
 let ttTimeout;
 
 function showTooltip(html, clientX, clientY) {
@@ -1203,11 +1205,6 @@ function svgEl(tag, attrs) {
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
   return el;
 }
-
-const W = 380, H = 200;
-const PAD = { top: 16, right: 16, bottom: 28, left: 36 };
-const CW = W - PAD.left - PAD.right;
-const CH = H - PAD.top - PAD.bottom;
 
 function makeSVG() {
   return svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart' });
