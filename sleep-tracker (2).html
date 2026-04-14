@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Somnia — Sleep Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── CSS Variables ─── */
+    :root {
+      --navy:       #06080f;
+      --navy-2:     #0c1120;
+      --navy-3:     #111827;
+      --panel:      rgba(255,255,255,0.045);
+      --panel-bd:   rgba(255,255,255,0.08);
+      --lavender:   #b9a9f5;
+      --lavender-2: #8b7cf8;
+      --cyan:       #67e8f9;
+      --cyan-2:     #22d3ee;
+      --mint:       #6ee7b7;
+      --rose:       #f9a8d4;
+      --text:       #e8eaf6;
+      --text-dim:   #8892b0;
+      --text-muted: #4a5568;
+      --glow-lav:   0 0 16px rgba(139,124,248,0.55);
+      --glow-cyan:  0 0 16px rgba(103,232,249,0.5);
+      --r-sm: 14px;
+      --r-md: 20px;
+      --r-lg: 28px;
+      --phone-w: 100%;
+    }
+
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--navy);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Starfield ─── */
+    #starfield {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: var(--lo, 0.1); transform: scale(1); }
+      50%      { opacity: var(--hi, 0.8); transform: scale(1.3); }
+    }
+
+    /* ─── App Shell ─── */
+    #app {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    /* ─── Phone Container → Full App Container ─── */
+    .phone {
+      width: 100%;
+      flex: 1;
+      display: flex; flex-direction: column;
+      background: linear-gradient(160deg, #0c1120 0%, #060810 60%, #090c18 100%);
+      position: relative;
+    }
+
+    /* ─── Page Views ─── */
+    .page { display: none; flex-direction: column; flex: 1; }
+    .page.active { display: flex; }
+
+    /* ─── Centered content wrapper for all pages ─── */
+    .content-col {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ─── Status Bar Spoof ─── */
+    .status-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 28px 0;
+      max-width: 1100px; margin: 0 auto; width: 100%;
+      font-size: 13px; font-weight: 500; color: var(--text-dim);
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── Nav ─── */
+    .nav-pills {
+      display: flex; gap: 6px;
+      padding: 14px 28px;
+      background: rgba(255,255,255,0.025);
+      border-bottom: 1px solid var(--panel-bd);
+      backdrop-filter: blur(12px);
+    }
+    .nav-pills-inner {
+      display: flex; gap: 8px;
+      width: 100%; max-width: 1100px;
+      margin: 0 auto;
+    }
+    .nav-pill {
+      padding: 10px 28px;
+      border: 1px solid var(--panel-bd);
+      border-radius: 50px;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .nav-pill.active {
+      background: linear-gradient(135deg, rgba(139,124,248,0.25), rgba(103,232,249,0.15));
+      border-color: rgba(139,124,248,0.5);
+      color: var(--lavender);
+      box-shadow: var(--glow-lav);
+    }
+    .nav-pill .pill-icon { font-size: 15px; }
+
+    /* ─── Section Header ─── */
+    .page-header {
+      padding: 28px 28px 8px;
+      max-width: 1100px; margin: 0 auto; width: 100%;
+    }
+    /* Form page header aligns with the narrower form card */
+    #page-form .page-header {
+      max-width: 716px; /* 660px card + 28px*2 padding */
+    }
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px; font-weight: 800;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle {
+      font-size: 14px; color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ─── Glass Panel ─── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-bd);
+      border-radius: var(--r-md);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* ═══════════════════════════════════
+       FORM PAGE
+    ═══════════════════════════════════ */
+    #page-form { overflow-y: auto; }
+
+    /* Outer centering wrapper */
+    .form-scroll {
+      padding: 16px 28px 48px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* The actual form card */
+    .form-card {
+      width: 100%;
+      max-width: 660px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Two-column row for paired fields */
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 100px;
+    }
+
+    @media (max-width: 540px) {
+      .form-row-2 { grid-template-columns: 1fr; }
+      .form-scroll { padding: 8px 16px 40px; }
+    }
+
+    /* Greeting banner */
+    .greeting-banner {
+      padding: 20px 20px;
+      background: linear-gradient(135deg, rgba(139,124,248,0.12), rgba(103,232,249,0.08));
+      border: 1px solid rgba(139,124,248,0.2);
+      border-radius: var(--r-md);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .greeting-moon { font-size: 36px; line-height: 1; }
+    .greeting-text .g-hi {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 700;
+      color: var(--lavender);
+    }
+    .greeting-text .g-sub {
+      font-size: 13px; color: var(--text-dim); margin-top: 2px;
+    }
+
+    /* Form group */
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    /* Date / number input */
+    .field-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field-input::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+    .field-input:focus {
+      border-color: var(--lavender-2);
+      box-shadow: 0 0 0 3px rgba(139,124,248,0.15);
+    }
+
+    /* Scale buttons (stress / productivity) */
+    .scale-row { display: flex; gap: 8px; }
+    .scale-btn {
+      flex: 1; padding: 14px 0;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-sm);
+      color: var(--text-dim);
+      font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .scale-btn:hover { border-color: rgba(139,124,248,0.4); }
+    .scale-btn.selected {
+      background: linear-gradient(135deg, rgba(139,124,248,0.3), rgba(103,232,249,0.2));
+      border-color: var(--lavender-2);
+      color: var(--lavender);
+      box-shadow: var(--glow-lav);
+    }
+    .scale-labels {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--text-muted);
+      padding: 0 2px;
+    }
+
+    /* Caffeine toggle */
+    .caf-row { display: flex; gap: 8px; }
+    .caf-btn {
+      flex: 1; padding: 16px 6px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-sm);
+      color: var(--text-dim);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .caf-btn .caf-icon { font-size: 22px; }
+    .caf-btn.selected {
+      background: linear-gradient(135deg, rgba(103,232,249,0.2), rgba(139,124,248,0.12));
+      border-color: var(--cyan-2);
+      color: var(--cyan);
+      box-shadow: var(--glow-cyan);
+    }
+
+    /* Hours slider */
+    .hours-display {
+      text-align: center; padding: 10px 0 4px;
+    }
+    .hours-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 48px; font-weight: 800;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+    .hours-unit { font-size: 14px; color: var(--text-dim); }
+    input[type="range"] {
+      width: 100%; -webkit-appearance: none;
+      height: 6px; border-radius: 3px;
+      background: linear-gradient(to right, var(--lavender-2) var(--pct, 50%), rgba(255,255,255,0.1) var(--pct, 50%));
+      outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      box-shadow: var(--glow-lav);
+      border: 3px solid var(--navy-2);
+      cursor: pointer;
+    }
+
+    /* Submit */
+    .btn-submit {
+      width: 100%; padding: 18px;
+      background: linear-gradient(135deg, var(--lavender-2), var(--cyan-2));
+      border: none; border-radius: var(--r-sm);
+      color: #0a0a1a; font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.02em;
+      box-shadow: 0 4px 24px rgba(139,124,248,0.4);
+      transition: all 0.2s ease;
+      position: relative; overflow: hidden;
+    }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:hover { box-shadow: 0 6px 32px rgba(139,124,248,0.6); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: linear-gradient(135deg, rgba(110,231,183,0.2), rgba(103,232,249,0.15));
+      border: 1px solid rgba(110,231,183,0.4);
+      color: var(--mint); padding: 12px 22px;
+      border-radius: 50px; font-size: 14px; font-weight: 500;
+      opacity: 0; transition: all 0.3s ease; z-index: 100;
+      backdrop-filter: blur(10px); pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Validation */
+    .field-error { font-size: 12px; color: #f87171; padding-left: 4px; display: none; }
+    .field-error.show { display: block; }
+
+    /* ═══════════════════════════════════
+       DASHBOARD PAGE
+    ═══════════════════════════════════ */
+    #page-dash { overflow-y: auto; }
+    .dash-scroll {
+      padding: 8px 28px 40px;
+      max-width: 1100px; margin: 0 auto; width: 100%;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* Charts always stack on mobile, go 2-col on wider screens */
+    .dash-charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .dash-charts-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Stat chips */
+    .stats-row { display: flex; gap: 10px; }
+    .stat-chip {
+      flex: 1; padding: 14px 12px;
+      border-radius: var(--r-sm);
+      background: var(--panel);
+      border: 1px solid var(--panel-bd);
+      text-align: center;
+    }
+    .stat-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px; font-weight: 800;
+    }
+    .stat-lbl { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+    .chip-sleep .stat-val { color: var(--lavender); }
+    .chip-stress .stat-val { color: var(--rose); }
+    .chip-prod .stat-val  { color: var(--mint); }
+
+    /* Chart panel */
+    .chart-panel {
+      padding: 18px 16px 14px;
+      background: var(--panel);
+      border: 1px solid var(--panel-bd);
+      border-radius: var(--r-md);
+      position: relative;
+    }
+    .chart-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px; font-weight: 700;
+      color: var(--text); margin-bottom: 5px;
+      letter-spacing: -0.01em;
+    }
+    .chart-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+    .chart-wrap { width: 100%; overflow: hidden; position: relative; }
+    svg.chart { width: 100%; display: block; overflow: visible; }
+
+    /* Tooltip */
+    .tt {
+      position: fixed;
+      background: rgba(12,17,32,0.97);
+      border: 1px solid rgba(139,124,248,0.4);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 13px; line-height: 1.7;
+      color: var(--text);
+      pointer-events: none;
+      opacity: 0; transition: opacity 0.12s ease;
+      z-index: 9999; min-width: 130px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,124,248,0.15);
+    }
+    .tt.visible { opacity: 1; }
+    .tt-row { display: flex; justify-content: space-between; gap: 14px; }
+    .tt-key { color: var(--text-dim); }
+    .tt-val { color: var(--lavender); font-weight: 600; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-family: 'Syne', sans-serif; font-size: 16px; color: var(--text-dim); margin-bottom: 6px; }
+    .empty-sub { font-size: 13px; }
+
+    .btn-seed {
+      margin-top: 16px; padding: 12px 24px;
+      background: rgba(139,124,248,0.15);
+      border: 1px solid rgba(139,124,248,0.35);
+      border-radius: 50px; color: var(--lavender);
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-seed:hover { background: rgba(139,124,248,0.25); }
+
+    /* Axis labels */
+    .axis-label { font-family: 'DM Sans', sans-serif; fill: #4a5568; font-size: 10px; }
+    .axis-line { stroke: rgba(255,255,255,0.07); }
+    .grid-line { stroke: rgba(255,255,255,0.04); stroke-dasharray: 3,3; }
+
+    /* Bar chart segments */
+    .bar-rect { rx: 6; transition: filter 0.15s; cursor: pointer; }
+    .bar-rect:hover { filter: brightness(1.25); }
+
+    /* Scatter point */
+    .dot { transition: r 0.15s, filter 0.15s; cursor: pointer; }
+    .dot:hover { filter: brightness(1.3) drop-shadow(0 0 6px currentColor); }
+
+    /* Line chart path */
+    .line-path {
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .line-dot { cursor: pointer; transition: r 0.15s; }
+    .line-dot:hover { r: 8; }
+
+    /* Footer actions */
+    .dash-footer {
+      display: flex; justify-content: center; padding-top: 4px;
+    }
+    .btn-danger {
+      padding: 10px 20px;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 50px; color: #f87171;
+      font-family: 'DM Sans', sans-serif; font-size: 12px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-danger:hover { background: rgba(248,113,113,0.2); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139,124,248,0.25); border-radius: 2px; }
+
+    /* ─── Bar animation ─── */
+    @keyframes barGrow {
+      from { transform: scaleY(0); transform-origin: bottom; }
+      to   { transform: scaleY(1); transform-origin: bottom; }
+    }
+    .bar-anim { animation: barGrow 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+    /* ═══════════════════════════════════
+       WELCOME & ONBOARDING
+    ═══════════════════════════════════ */
+    #page-welcome, #page-onboard {
+      overflow-y: auto;
+      justify-content: center;
+      align-items: center;
+    }
+    .welcome-wrap {
+      max-width: 520px; width: 100%;
+      padding: 56px 32px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 24px; text-align: center;
+    }
+    .welcome-logo {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, rgba(139,124,248,0.2), rgba(103,232,249,0.12));
+      border: 1px solid rgba(139,124,248,0.3); border-radius: 20px;
+      display: flex; align-items: center; justify-content: center; font-size: 32px;
+      box-shadow: 0 0 40px rgba(139,124,248,0.2);
+    }
+    .welcome-title {
+      font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.03em; line-height: 1.1;
+    }
+    .welcome-sub { font-size: 15px; color: var(--text-dim); max-width: 360px; line-height: 1.6; }
+    .welcome-features { display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; }
+    .wf-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; background: var(--panel);
+      border: 1px solid var(--panel-bd); border-radius: var(--r-sm);
+    }
+    .wf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .wf-text { font-size: 14px; color: var(--text-dim); }
+    .wf-text strong { color: var(--text); display: block; font-size: 14px; margin-bottom: 1px; }
+    .btn-primary {
+      width: 100%; padding: 18px;
+      background: linear-gradient(135deg, var(--lavender-2), var(--cyan-2));
+      border: none; border-radius: var(--r-sm); color: #0a0a1a;
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.02em;
+      box-shadow: 0 4px 24px rgba(139,124,248,0.4); transition: all 0.2s ease;
+    }
+    .btn-primary:hover { box-shadow: 0 6px 32px rgba(139,124,248,0.6); transform: translateY(-1px); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-ghost {
+      background: none; border: none; color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      cursor: pointer; padding: 4px; transition: color 0.2s;
+    }
+    .btn-ghost:hover { color: var(--text-dim); }
+
+    /* Onboarding */
+    .onboard-wrap { max-width: 540px; width: 100%; padding: 40px 32px; display: flex; flex-direction: column; gap: 20px; }
+    .onboard-progress { display: flex; gap: 8px; align-items: center; }
+    .ob-pip { width: 28px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); transition: background 0.3s, width 0.3s; }
+    .ob-pip-active { background: var(--lavender); width: 44px; }
+    .onboard-step { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: var(--lavender); text-transform: uppercase; }
+    .onboard-q { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .pref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pref-btn {
+      padding: 18px 12px; background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08); border-radius: var(--r-sm);
+      color: var(--text-dim); font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s ease; text-align: center; line-height: 1.4;
+    }
+    .pref-btn:hover { border-color: rgba(139,124,248,0.3); }
+    .pref-btn.selected {
+      background: linear-gradient(135deg, rgba(139,124,248,0.25), rgba(103,232,249,0.15));
+      border-color: var(--lavender-2); color: var(--lavender); box-shadow: var(--glow-lav);
+    }
+    .onboard-note { font-size: 12px; color: var(--text-muted); text-align: center; }
+    #ob-q1, #ob-q2 { animation: fadeUp 0.3s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Ghost pill in nav for re-accessing setup */
+    .nav-pills-inner { display: flex; gap: 8px; width: 100%; max-width: 1100px; margin: 0 auto; align-items: center; }
+    .nav-pill-ghost {
+      margin-left: auto; opacity: 0.4;
+      font-size: 12px !important; padding: 8px 16px !important;
+      border-style: dashed !important;
+    }
+    .nav-pill-ghost:hover { opacity: 0.75; }
+
+    /* ═══════════════════════════════════
+       INSIGHTS PAGE
+    ═══════════════════════════════════ */
+    #page-insights { overflow-y: auto; }
+    .insights-scroll {
+      padding: 8px 28px 60px;
+      max-width: 1100px; margin: 0 auto; width: 100%;
+      display: flex; flex-direction: column; gap: 0;
+    }
+
+    /* Each insight block: big number left, text right */
+    .insight-block {
+      display: flex; align-items: center;
+      gap: 40px; padding: 48px 0;
+      border-bottom: 1px solid var(--panel-bd);
+    }
+    .insight-block:last-of-type { border-bottom: none; }
+
+    /* The big number */
+    .insight-num {
+      flex-shrink: 0; min-width: 160px;
+      font-family: 'Syne', sans-serif; font-size: 96px; font-weight: 800;
+      line-height: 0.9; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--lavender) 0%, rgba(185,169,245,0.4) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      user-select: none;
+    }
+    .insight-num-unit {
+      display: block;
+      font-size: 22px; font-weight: 600; letter-spacing: -0.01em;
+      margin-top: 4px;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* Text side */
+    .insight-text { flex: 1; }
+    .insight-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .insight-headline {
+      font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700;
+      color: var(--text); line-height: 1.25; margin-bottom: 10px;
+    }
+    .insight-headline em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .insight-body {
+      font-size: 14px; color: var(--text-dim); line-height: 1.7; max-width: 480px;
+    }
+
+    /* Colour variants for the number */
+    .insight-num.cyan  { background: linear-gradient(135deg, var(--cyan) 0%, rgba(103,232,249,0.35) 100%); -webkit-background-clip: text; }
+    .insight-num.mint  { background: linear-gradient(135deg, var(--mint) 0%, rgba(110,231,183,0.35) 100%); -webkit-background-clip: text; }
+    .insight-num.rose  { background: linear-gradient(135deg, var(--rose) 0%, rgba(249,168,212,0.35) 100%); -webkit-background-clip: text; }
+
+    /* Back button */
+    .btn-outline-sm {
+      padding: 10px 20px; background: rgba(139,124,248,0.1);
+      border: 1px solid rgba(139,124,248,0.25); border-radius: 50px;
+      color: var(--lavender); font-family: 'DM Sans', sans-serif;
+      font-size: 13px; cursor: pointer; transition: all 0.2s; width: fit-content;
+    }
+    .btn-outline-sm:hover { background: rgba(139,124,248,0.2); }
+
+    /* Empty state for insights */
+    .insights-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .insights-empty-title { font-family: 'Syne', sans-serif; font-size: 18px; color: var(--text-dim); margin-bottom: 8px; }
+    .insights-empty-sub { font-size: 14px; }
+
+    @media (max-width: 600px) {
+      .insight-block { flex-direction: column; align-items: flex-start; gap: 16px; padding: 36px 0; }
+      .insight-num { font-size: 72px; min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Starfield canvas -->
+<div id="starfield"></div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<div id="app">
+  <div class="phone">
+
+    <!-- ─── Status Bar ─── -->
+    <div class="status-bar">
+      <span id="status-time">9:41</span>
+      <span></span>
+    </div>
+
+    <!-- ─── Navigation ─── -->
+    <nav class="nav-pills" id="main-nav">
+      <div class="nav-pills-inner">
+        <button class="nav-pill" id="nav-form" onclick="switchPage('form')">
+          <span class="pill-icon"></span> Log Sleep
+        </button>
+        <button class="nav-pill" id="nav-dash" onclick="switchPage('dash')">
+          <span class="pill-icon"></span> Dashboard
+        </button>
+        <button class="nav-pill" id="nav-insights" onclick="switchPage('insights')">
+          Insights
+        </button>
+        <button class="nav-pill nav-pill-ghost" onclick="restartOnboarding()">Setup</button>
+      </div>
+    </nav>
+
+    <!-- ══════════════════════
+         WELCOME PAGE
+    ══════════════════════ -->
+    <div class="page" id="page-welcome">
+      <div class="welcome-wrap">
+        <div class="welcome-logo">🌙</div>
+        <div class="welcome-title">Welcome to Somnia</div>
+        <div class="welcome-sub">Your personal sleep tracking companion. Log each morning and discover what's affecting your rest.</div>
+        <div class="welcome-features">
+          <div class="wf-item">
+            <div class="wf-dot" style="background:var(--lavender)"></div>
+            <div class="wf-text"><strong>Track trends</strong>See how sleep, stress, caffeine and productivity connect over time.</div>
+          </div>
+          <div class="wf-item">
+            <div class="wf-dot" style="background:var(--cyan)"></div>
+            <div class="wf-text"><strong>Get insights</strong>Understand your patterns through clear visualisations.</div>
+          </div>
+          <div class="wf-item">
+            <div class="wf-dot" style="background:var(--mint)"></div>
+            <div class="wf-text"><strong>Private by default</strong>All data stays on your device. No account needed.</div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="switchPage('onboard')">Get Started</button>
+        <button class="btn-ghost" onclick="completeOnboarding()">Skip — go straight to dashboard</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+         ONBOARDING PAGE
+    ══════════════════════ -->
+    <div class="page" id="page-onboard">
+      <div class="onboard-wrap">
+
+        <div class="onboard-progress">
+          <div class="ob-pip ob-pip-active" id="ob-pip-1"></div>
+          <div class="ob-pip" id="ob-pip-2"></div>
+        </div>
+
+        <!-- Question 1 -->
+        <div id="ob-q1">
+          <div class="onboard-step">Step 1 of 2</div>
+          <div class="onboard-q">What is your main goal with Somnia?</div>
+          <div class="pref-grid" id="pref-goal">
+            <button class="pref-btn" data-val="sleep">Improve sleep quality</button>
+            <button class="pref-btn" data-val="stress">Manage stress better</button>
+            <button class="pref-btn" data-val="productivity">Boost productivity</button>
+            <button class="pref-btn" data-val="caffeine">Reduce caffeine reliance</button>
+          </div>
+        </div>
+
+        <!-- Question 2 (hidden until Q1 answered) -->
+        <div id="ob-q2" style="display:none; flex-direction:column; gap:16px;">
+          <div class="onboard-step">Step 2 of 2</div>
+          <div class="onboard-q">How would you describe your sleep?</div>
+          <div class="pref-grid" id="pref-sleep">
+            <button class="pref-btn" data-val="short">Often too short</button>
+            <button class="pref-btn" data-val="inconsistent">Very inconsistent</button>
+            <button class="pref-btn" data-val="restless">Restless / poor quality</button>
+            <button class="pref-btn" data-val="ok">Generally okay</button>
+          </div>
+          <div class="onboard-note">Your answers personalise your experience. You can change this at any time.</div>
+          <button class="btn-primary" id="ob-finish" onclick="completeOnboarding()">Start Tracking</button>
+          <button class="btn-ghost" onclick="goBackToQ1()">← Back</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+         FORM PAGE
+    ══════════════════════ -->
+    <div class="page" id="page-form">
+      <div class="page-header">
+        <div class="page-title">Good morning</div>
+        <div class="page-subtitle">How did you sleep last night?</div>
+      </div>
+
+      <div class="form-scroll">
+        <div class="form-card">
+
+          <!-- Banner -->
+          <div class="greeting-banner">
+            <div class="greeting-moon">🌛</div>
+            <div class="greeting-text">
+              <div class="g-hi">Track your patterns</div>
+              <div class="g-sub">Log daily to reveal sleep insights</div>
+            </div>
+          </div>
+
+          <!-- Date + Caffeine side by side -->
+          <div class="form-row-2">
+            <!-- Date -->
+            <div class="form-group">
+              <label class="form-label">Date</label>
+              <input type="date" class="field-input" id="f-date" />
+              <span class="field-error" id="err-date">Please select a date.</span>
+            </div>
+
+            <!-- Caffeine -->
+            <div class="form-group">
+              <label class="form-label">☕ Caffeine Intake</label>
+              <div class="caf-row" id="caf-row">
+                <button class="caf-btn" data-val="0">
+                  <span class="caf-icon">🚫</span>0 drinks
+                </button>
+                <button class="caf-btn" data-val="1">
+                  <span class="caf-icon">☕</span>1 drink
+                </button>
+                <button class="caf-btn" data-val="2">
+                  <span class="caf-icon">⚡</span>2+
+                </button>
+              </div>
+              <span class="field-error" id="err-caf">Please select caffeine intake.</span>
+            </div>
+          </div>
+
+          <!-- Hours slept (slider) — full width -->
+          <div class="form-group panel" id="hours-group" style="padding:18px 20px;">
+            <label class="form-label">Hours Slept</label>
+            <div class="hours-display">
+              <span class="hours-num" id="hours-display">7.0</span>
+              <div class="hours-unit">hours</div>
+            </div>
+            <input type="range" id="f-hours" min="2" max="12" step="0.5" value="7" />
+            <span class="field-error" id="err-hours">Please set hours slept.</span>
+          </div>
+
+          <!-- Stress + Productivity side by side -->
+          <div class="form-row-2">
+            <!-- Stress -->
+            <div class="form-group">
+              <label class="form-label">Stress Level</label>
+              <div class="scale-row" id="stress-row">
+                <button class="scale-btn" data-val="1">1</button>
+                <button class="scale-btn" data-val="2">2</button>
+                <button class="scale-btn" data-val="3">3</button>
+                <button class="scale-btn" data-val="4">4</button>
+                <button class="scale-btn" data-val="5">5</button>
+              </div>
+              <div class="scale-labels"><span>calm</span><span>overwhelmed</span></div>
+              <span class="field-error" id="err-stress">Please select a stress level.</span>
+            </div>
+
+            <!-- Productivity -->
+            <div class="form-group">
+              <label class="form-label">Productivity Level</label>
+              <div class="scale-row" id="prod-row">
+                <button class="scale-btn" data-val="1">1</button>
+                <button class="scale-btn" data-val="2">2</button>
+                <button class="scale-btn" data-val="3">3</button>
+                <button class="scale-btn" data-val="4">4</button>
+                <button class="scale-btn" data-val="5">5</button>
+              </div>
+              <div class="scale-labels"><span>low</span><span>peak</span></div>
+              <span class="field-error" id="err-prod">Please select a productivity level.</span>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button class="btn-submit" onclick="handleSubmit()">Save Entry</button>
+
+        </div><!-- .form-card -->
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+         DASHBOARD PAGE
+    ══════════════════════ -->
+    <div class="page" id="page-dash">
+      <div class="page-header">
+        <div class="page-title">Your Trends</div>
+        <div class="page-subtitle">Visualising your sleep patterns</div>
+      </div>
+
+      <div class="dash-scroll" id="dash-content">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+         INSIGHTS PAGE
+    ══════════════════════ -->
+    <div class="page" id="page-insights">
+      <div class="page-header">
+        <div class="page-title">Insights</div>
+        <div class="page-subtitle">What your data is telling you</div>
+      </div>
+      <div class="insights-scroll" id="insights-content">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+  </div><!-- .phone -->
+</div><!-- #app -->
+
+<!-- Shared tooltip -->
+<div class="tt" id="tooltip"></div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   DATA LAYER
+════════════════════════════════════════════════════ */
+const STORAGE_KEY = 'somnia_entries';
+
+/** Retrieve all entries from localStorage */
+function getEntries() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+
+/** Add a new entry and persist */
+function addEntry(entry) {
+  const entries = getEntries();
+  entries.push(entry);
+  entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/** Delete every entry */
+function deleteAllEntries() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/** Seed demo data modelling a heavy coffee drinker:
+ *  - Almost always 2+ drinks/day
+ *  - Shorter sleep (5–7h range, occasionally less)
+ *  - Higher stress mid-week
+ *  - Productivity inversely tied to poor sleep + high caffeine
+ */
+function seedSampleData() {
+  const today = new Date();
+  const samples = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dow = d.getDay(); // 0=Sun, 6=Sat
+
+    // Heavy caffeine — mostly 2+, occasionally 1
+    const caffeine = Math.random() < 0.78 ? 2 : 1;
+
+    // Sleep: short on weekdays, slightly better on weekends
+    const isWeekend = dow === 0 || dow === 6;
+    const baseSleep = isWeekend ? 7.0 : 5.5;
+    const hours = Math.max(3.5, +(baseSleep + (Math.random() * 2 - 1)).toFixed(1));
+
+    // Stress: higher mid-week, lower on weekends
+    const baseStress = (dow >= 2 && dow <= 4) ? 4 : 2;
+    const stress = Math.min(5, Math.max(1, Math.round(baseStress + (Math.random() * 2 - 1))));
+
+    // Productivity: hurt by low sleep and high caffeine jitters
+    const sleepScore = Math.min(1, hours / 8);
+    const baseprod = Math.round(1 + sleepScore * 3 + Math.random() * 1.5);
+    const productivity = Math.min(5, Math.max(1, baseprod));
+
+    samples.push({ date: dateStr, hours, stress, productivity, caffeine });
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
+}
+
+/* ════════════════════════════════════════════════════
+   FIRST-TIME FLOW
+════════════════════════════════════════════════════ */
+const ONBOARD_KEY = 'somnia_onboarded';
+
+/* ════════════════════════════════════════════════════
+   STARFIELD
+════════════════════════════════════════════════════ */
+(function buildStars() {
+  const sf = document.getElementById('starfield');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.2 + 0.4;
+    Object.assign(s.style, {
+      width:  sz + 'px', height: sz + 'px',
+      left:   Math.random() * 100 + '%',
+      top:    Math.random() * 100 + '%',
+      '--dur':   (2.5 + Math.random() * 4) + 's',
+      '--delay': (Math.random() * 5) + 's',
+      '--lo':    (Math.random() * 0.15) + '',
+      '--hi':    (0.4 + Math.random() * 0.6) + '',
+    });
+    sf.appendChild(s);
+  }
+})();
+
+/* ════════════════════════════════════════════════════
+   STATUS BAR CLOCK
+════════════════════════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('status-time').textContent =
+    now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+/* ════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════ */
+function switchPage(which) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + which).classList.add('active');
+  const noNav = ['welcome', 'onboard'];
+  document.getElementById('main-nav').style.display = noNav.includes(which) ? 'none' : '';
+  const pill = document.getElementById('nav-' + which);
+  if (pill) pill.classList.add('active');
+  if (which === 'dash')     renderDashboard();
+  if (which === 'insights') renderInsights();
+}
+
+function completeOnboarding() {
+  localStorage.setItem(ONBOARD_KEY, '1');
+  // Always ensure sample data exists when coming from onboarding
+  if (getEntries().length === 0) seedSampleData();
+  switchPage('dash');
+  // Re-render after a tick to ensure the page is visible before charts paint
+  setTimeout(renderDashboard, 50);
+}
+
+function restartOnboarding() {
+  localStorage.removeItem(ONBOARD_KEY);
+  resetOnboardingState();
+  switchPage('welcome');
+}
+
+/* Progressive disclosure — Q1 auto-advances to Q2 on selection */
+document.getElementById('pref-goal').querySelectorAll('.pref-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('pref-goal').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    setTimeout(showQ2, 220);
+  });
+});
+
+document.getElementById('pref-sleep').querySelectorAll('.pref-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('pref-sleep').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+function showQ2() {
+  document.getElementById('ob-q1').style.display = 'none';
+  const q2 = document.getElementById('ob-q2');
+  q2.style.display = 'flex';
+  document.getElementById('ob-pip-1').classList.remove('ob-pip-active');
+  document.getElementById('ob-pip-2').classList.add('ob-pip-active');
+}
+
+function goBackToQ1() {
+  document.getElementById('ob-q2').style.display = 'none';
+  document.getElementById('ob-q1').style.display = 'block';
+  document.getElementById('pref-sleep').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ob-pip-1').classList.add('ob-pip-active');
+  document.getElementById('ob-pip-2').classList.remove('ob-pip-active');
+}
+
+function resetOnboardingState() {
+  document.getElementById('pref-goal').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pref-sleep').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ob-q1').style.display = 'block';
+  document.getElementById('ob-q2').style.display = 'none';
+  document.getElementById('ob-pip-1').classList.add('ob-pip-active');
+  document.getElementById('ob-pip-2').classList.remove('ob-pip-active');
+}
+
+/* Startup routing */
+(function startup() {
+  if (!localStorage.getItem(ONBOARD_KEY)) {
+    document.getElementById('main-nav').style.display = 'none';
+    switchPage('welcome');
+  } else {
+    if (getEntries().length === 0) seedSampleData();
+    switchPage('dash');
+  }
+})();
+
+/* ════════════════════════════════════════════════════
+   FORM LOGIC
+════════════════════════════════════════════════════ */
+// Set today's date by default
+(function setDefaultDate() {
+  const td = new Date().toISOString().slice(0, 10);
+  document.getElementById('f-date').value = td;
+})();
+
+// Hours slider → live display
+const hoursSlider = document.getElementById('f-hours');
+const hoursDisplay = document.getElementById('hours-display');
+hoursSlider.addEventListener('input', () => {
+  hoursDisplay.textContent = parseFloat(hoursSlider.value).toFixed(1);
+  // Update fill
+  const pct = ((hoursSlider.value - 2) / (12 - 2)) * 100;
+  hoursSlider.style.setProperty('--pct', pct + '%');
+});
+// Init fill
+hoursSlider.dispatchEvent(new Event('input'));
+
+// Scale button groups
+function setupScaleGroup(rowId) {
+  document.getElementById(rowId).querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(rowId).querySelectorAll('.scale-btn')
+        .forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+}
+setupScaleGroup('stress-row');
+setupScaleGroup('prod-row');
+
+// Caffeine buttons
+document.getElementById('caf-row').querySelectorAll('.caf-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('caf-row').querySelectorAll('.caf-btn')
+      .forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+function getSelected(rowId) {
+  const sel = document.getElementById(rowId).querySelector('.selected');
+  return sel ? +sel.dataset.val : null;
+}
+
+function showError(id, show) {
+  const el = document.getElementById(id);
+  el.classList.toggle('show', show);
+}
+
+function handleSubmit() {
+  const date = document.getElementById('f-date').value;
+  const hours = parseFloat(hoursSlider.value);
+  const stress = getSelected('stress-row');
+  const prod = getSelected('prod-row');
+  const cafSel = document.getElementById('caf-row').querySelector('.selected');
+  const caffeine = cafSel ? +cafSel.dataset.val : null;
+
+  let valid = true;
+  showError('err-date',   !date);   if (!date)     valid = false;
+  showError('err-stress', !stress); if (!stress)   valid = false;
+  showError('err-prod',   !prod);   if (!prod)     valid = false;
+  showError('err-caf',    caffeine === null); if (caffeine === null) valid = false;
+
+  if (!valid) return;
+
+  addEntry({ date, hours, stress, productivity: prod, caffeine });
+  showToast('✦ Sleep logged successfully');
+
+  // Reset form
+  document.getElementById('stress-row').querySelectorAll('.scale-btn')
+    .forEach(b => b.classList.remove('selected'));
+  document.getElementById('prod-row').querySelectorAll('.scale-btn')
+    .forEach(b => b.classList.remove('selected'));
+  document.getElementById('caf-row').querySelectorAll('.caf-btn')
+    .forEach(b => b.classList.remove('selected'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ════════════════════════════════════════════════════
+   TOOLTIP UTILITY
+════════════════════════════════════════════════════ */
+const tooltip = document.getElementById('tooltip');
+let ttTimeout;
+
+function showTooltip(html, clientX, clientY) {
+  clearTimeout(ttTimeout);
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+  tooltip.style.left = '-9999px';
+  tooltip.style.top  = '-9999px';
+  requestAnimationFrame(() => {
+    const ttW = tooltip.offsetWidth  || 150;
+    const ttH = tooltip.offsetHeight || 80;
+    const vw  = window.innerWidth;
+    const vh  = window.innerHeight;
+    const GAP = 14;
+    let left = clientX + GAP;
+    let top  = clientY - ttH / 2;
+    if (left + ttW + 8 > vw) left = clientX - ttW - GAP;
+    if (top < 8)             top  = 8;
+    if (top + ttH > vh - 8)  top  = vh - ttH - 8;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = top  + 'px';
+  });
+}
+
+function hideTooltip() {
+  ttTimeout = setTimeout(() => tooltip.classList.remove('visible'), 120);
+}
+
+function ttRow(key, val) {
+  return `<div class="tt-row"><span class="tt-key">${key}</span><span class="tt-val">${val}</span></div>`;
+}
+
+/* ─── SVG helpers ─── */
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+const W = 380, H = 200;
+const PAD = { top: 16, right: 16, bottom: 28, left: 36 };
+const CW = W - PAD.left - PAD.right;
+const CH = H - PAD.top - PAD.bottom;
+
+function makeSVG() {
+  return svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart' });
+}
+
+/* ════════════════════════════════════════════════════
+   DASHBOARD RENDERER
+════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const entries = getEntries();
+  const cont = document.getElementById('dash-content');
+  cont.innerHTML = '';
+
+  if (entries.length === 0) {
+    cont.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🌙</div>
+        <div class="empty-title">No entries yet</div>
+        <div class="empty-sub">Start logging your sleep to build your trends.</div>
+      </div>`;
+    return;
+  }
+
+  // ── Stat chips ──
+  const avgSleep = (entries.reduce((s, e) => s + e.hours, 0) / entries.length).toFixed(1);
+  const avgStress = (entries.reduce((s, e) => s + e.stress, 0) / entries.length).toFixed(1);
+  const avgProd  = (entries.reduce((s, e) => s + e.productivity, 0) / entries.length).toFixed(1);
+
+  cont.insertAdjacentHTML('beforeend', `
+    <div class="stats-row">
+      <div class="stat-chip chip-sleep"><div class="stat-val">${avgSleep}h</div><div class="stat-lbl">Avg Sleep</div></div>
+      <div class="stat-chip chip-stress"><div class="stat-val">${avgStress}</div><div class="stat-lbl">Avg Stress</div></div>
+      <div class="stat-chip chip-prod"><div class="stat-val">${avgProd}</div><div class="stat-lbl">Avg Prod.</div></div>
+    </div>`);
+
+  // ── Charts grid ──
+  const grid = document.createElement('div');
+  grid.className = 'dash-charts-grid';
+
+  // ── Chart 1: Sleep Over Time ──
+  grid.appendChild(buildPanel('Sleep Over Time', 'Hours of sleep per night', buildLineChart(entries)));
+
+  // ── Chart 2: Sleep vs Stress ──
+  grid.appendChild(buildPanel('Sleep vs Stress', 'Average sleep duration per stress level', buildScatterChart(entries)));
+
+  // ── Chart 3: Caffeine Comparison ──
+  grid.appendChild(buildPanel('Caffeine vs Sleep', 'Average sleep by caffeine intake', buildCaffeineChart(entries)));
+
+  // ── Chart 4: Sleep vs Productivity ──
+  grid.appendChild(buildPanel('Sleep & Productivity', 'Average productivity by sleep range', buildProductivityChart(entries)));
+
+  cont.appendChild(grid);
+
+  // Footer
+  cont.insertAdjacentHTML('beforeend', `
+    <div class="dash-footer">
+      <button class="btn-danger" onclick="if(confirm('Clear all entries? This will remove your data permanently.')){deleteAllEntries(); renderDashboard();}">
+        Clear Data
+      </button>
+    </div>`);
+}
+
+function buildPanel(title, desc, chartEl) {
+  const div = document.createElement('div');
+  div.className = 'chart-panel panel';
+  div.innerHTML = `<div class="chart-title">${title}</div><div class="chart-desc">${desc}</div>`;
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-wrap';
+  wrap.appendChild(chartEl);
+  div.appendChild(wrap);
+  return div;
+}
+
+function drawAxes(svg, xLabels, yMin, yMax, ySteps = 4) {
+  // Grid lines
+  for (let i = 0; i <= ySteps; i++) {
+    const y = PAD.top + (CH / ySteps) * i;
+    svg.appendChild(svgEl('line', { x1: PAD.left, y1: y, x2: PAD.left + CW, y2: y, class: 'grid-line', stroke: 'rgba(255,255,255,0.05)' }));
+    const val = (yMax - ((yMax - yMin) / ySteps) * i).toFixed(1);
+    const t = svgEl('text', { x: PAD.left - 5, y: y + 4, class: 'axis-label', 'text-anchor': 'end', fill: '#6b7a99', 'font-size': '11' });
+    t.textContent = val;
+    svg.appendChild(t);
+  }
+  // X labels
+  if (xLabels) {
+    const step = CW / (xLabels.length - 1 || 1);
+    xLabels.forEach((lbl, i) => {
+      const x = PAD.left + (xLabels.length > 1 ? i * step : CW / 2);
+      const t = svgEl('text', { x, y: PAD.top + CH + 18, class: 'axis-label', 'text-anchor': 'middle', fill: '#6b7a99', 'font-size': '11' });
+      t.textContent = lbl;
+      svg.appendChild(t);
+    });
+  }
+}
+
+/* ─── Chart 1: Line Chart ─── */
+function buildLineChart(entries) {
+  const svg = makeSVG();
+  const n = entries.length;
+  const maxH = Math.max(...entries.map(e => e.hours), 9);
+  const minH = Math.min(...entries.map(e => e.hours), 4);
+
+  // Show max 14 labels for readability
+  const step = Math.ceil(n / 7);
+  const xLabels = entries.map((e, i) => (i % step === 0 ? e.date.slice(5) : ''));
+
+  drawAxes(svg, xLabels, Math.floor(minH - 0.5), Math.ceil(maxH + 0.5));
+
+  const xScale = i => PAD.left + (n > 1 ? (i / (n - 1)) * CW : CW / 2);
+  const yScale = h => PAD.top + CH - ((h - (minH - 0.5)) / ((maxH + 0.5) - (minH - 0.5))) * CH;
+
+  // Gradient fill
+  const defs = svgEl('defs', {});
+  const grad = svgEl('linearGradient', { id: 'lineGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
+  grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': '#8b7cf8', 'stop-opacity': '0.35' }));
+  grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': '#8b7cf8', 'stop-opacity': '0.01' }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  // Area fill path
+  let areaD = `M ${xScale(0)} ${yScale(entries[0].hours)}`;
+  entries.forEach((e, i) => { if (i > 0) areaD += ` L ${xScale(i)} ${yScale(e.hours)}`; });
+  areaD += ` L ${xScale(n - 1)} ${PAD.top + CH} L ${xScale(0)} ${PAD.top + CH} Z`;
+  svg.appendChild(svgEl('path', { d: areaD, fill: 'url(#lineGrad)' }));
+
+  // Line
+  let lineD = `M ${xScale(0)} ${yScale(entries[0].hours)}`;
+  entries.forEach((e, i) => { if (i > 0) lineD += ` L ${xScale(i)} ${yScale(e.hours)}`; });
+  svg.appendChild(svgEl('path', { d: lineD, class: 'line-path', stroke: '#8b7cf8', 'stroke-width': '2.5', fill: 'none' }));
+
+  // Dots
+  entries.forEach((e, i) => {
+    const cx = xScale(i), cy = yScale(e.hours);
+    const dot = svgEl('circle', { cx, cy, r: '5', fill: '#b9a9f5', stroke: '#0c1120', 'stroke-width': '2', class: 'line-dot' });
+    dot.addEventListener('mouseenter', ev => {
+      showTooltip(
+        ttRow('Date', e.date) + ttRow('Sleep', e.hours + 'h') + ttRow('Stress', e.stress + '/5') + ttRow('Prod.', e.productivity + '/5'),
+        ev.clientX, ev.clientY
+      );
+    });
+    dot.addEventListener('mouseleave', hideTooltip);
+    dot.addEventListener('touchstart', ev => {
+      const t = ev.touches[0];
+      showTooltip(ttRow('Date', e.date) + ttRow('Sleep', e.hours + 'h') + ttRow('Stress', e.stress + '/5'), t.clientX, t.clientY);
+      setTimeout(hideTooltip, 2500);
+    });
+    svg.appendChild(dot);
+  });
+
+  return svg;
+}
+
+/* ─── Chart 2: Sleep vs Stress — horizontal bar chart by stress level ─── */
+function buildScatterChart(entries) {
+  const SW = 380, SH = 240;
+  const SP = { top: 12, right: 24, bottom: 42, left: 46 };
+  const SCW = SW - SP.left - SP.right;
+  const SCH = SH - SP.top  - SP.bottom;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${SW} ${SH}`, class: 'chart' });
+
+  // ── Compute avg sleep + count for each stress level 1–5 ──
+  const stressColors = { 1: '#6ee7b7', 2: '#67e8f9', 3: '#b9a9f5', 4: '#f9a8d4', 5: '#f87171' };
+  const stressLabels = { 1: 'Calm', 2: 'Mild', 3: 'Moderate', 4: 'High', 5: 'Max' };
+
+  const data = [1,2,3,4,5].map(s => {
+    const sub = entries.filter(e => e.stress === s);
+    return {
+      stress: s,
+      count:  sub.length,
+      avg:    sub.length ? +(sub.reduce((a,e) => a + e.hours, 0) / sub.length).toFixed(2) : 0,
+      color:  stressColors[s],
+      label:  stressLabels[s],
+    };
+  });
+
+  const maxAvg = Math.max(...data.map(d => d.avg), 9);
+  const rowH   = SCH / 5;         // height per stress-level row
+  const barH   = rowH * 0.42;     // bar thickness
+  const xScale = v => SP.left + (v / (maxAvg + 1)) * SCW;
+
+  // ── Vertical grid lines ──
+  const gridVals = [2,4,6,8,10].filter(v => v <= maxAvg + 1);
+  gridVals.forEach(v => {
+    const x = xScale(v);
+    svg.appendChild(svgEl('line', { x1: x, y1: SP.top, x2: x, y2: SP.top + SCH,
+      stroke: 'rgba(255,255,255,0.06)', 'stroke-dasharray': '3,4' }));
+    const t = svgEl('text', { x, y: SP.top + SCH + 16, 'text-anchor': 'middle',
+      fill: '#6b7a99', 'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+    t.textContent = v + 'h';
+    svg.appendChild(t);
+  });
+
+  // ── Rows ──
+  data.forEach((d, i) => {
+    const rowY  = SP.top + i * rowH;
+    const midY  = rowY + rowH / 2;
+    const barY  = midY - barH / 2;
+    const barW  = d.count > 0 ? xScale(d.avg) - SP.left : 0;
+
+    // Row background stripe (alternating subtle)
+    if (i % 2 === 0) {
+      svg.appendChild(svgEl('rect', { x: SP.left, y: rowY, width: SCW, height: rowH,
+        fill: 'rgba(255,255,255,0.015)', rx: '0' }));
+    }
+
+    // Stress level label (left)
+    const lbl = svgEl('text', { x: SP.left - 6, y: midY + 4, 'text-anchor': 'end',
+      fill: d.count > 0 ? d.color : '#6b7a99', 'font-size': '13',
+      'font-family': 'Syne, sans-serif', 'font-weight': '700' });
+    lbl.textContent = d.stress;
+    svg.appendChild(lbl);
+
+    if (d.count === 0) {
+      // No data label
+      const nt = svgEl('text', { x: SP.left + 8, y: midY + 4, fill: '#6b7a99',
+        'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+      nt.textContent = 'no data';
+      svg.appendChild(nt);
+      return;
+    }
+
+    // Track (full-width dim background)
+    svg.appendChild(svgEl('rect', { x: SP.left, y: barY, width: SCW, height: barH,
+      fill: 'rgba(255,255,255,0.04)', rx: '4' }));
+
+    // Filled bar
+    const bar = svgEl('rect', { x: SP.left, y: barY, width: barW, height: barH,
+      fill: d.color, opacity: '0.75', rx: '4',
+      class: 'bar-anim', style: `animation-delay:${i * 0.08}s; cursor:pointer` });
+
+    // End-cap dot glow
+    const capX = SP.left + barW;
+    const cap  = svgEl('circle', { cx: capX, cy: midY, r: '5',
+      fill: d.color, style: 'cursor:pointer',
+      'filter': `drop-shadow(0 0 5px ${d.color})` });
+
+    // Value label after bar
+    const vt = svgEl('text', { x: capX + 9, y: midY + 4, fill: d.color,
+      'font-size': '12', 'font-family': 'Syne, sans-serif', 'font-weight': '700' });
+    vt.textContent = d.avg + 'h';
+    svg.appendChild(vt);
+
+    // Count label (small, right-aligned)
+    const ct = svgEl('text', { x: SP.left + SCW, y: midY + 4, 'text-anchor': 'end',
+      fill: '#6b7a99', 'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+    ct.textContent = `n=${d.count}`;
+    svg.appendChild(ct);
+
+    // ── Hover interactions ──
+    const onEnter = ev => {
+      bar.setAttribute('opacity', '1');
+      cap.setAttribute('r', '7');
+      showTooltip(
+        ttRow('Stress', d.stress + '/5 — ' + d.label) +
+        ttRow('Avg sleep', d.avg + 'h') +
+        ttRow('Entries', d.count),
+        ev.clientX, ev.clientY
+      );
+    };
+    const onLeave = () => {
+      bar.setAttribute('opacity', '0.75');
+      cap.setAttribute('r', '5');
+      hideTooltip();
+    };
+    const onTouch = ev => {
+      const t = ev.touches[0];
+      onEnter({ clientX: t.clientX, clientY: t.clientY });
+      setTimeout(onLeave, 2500);
+    };
+    [bar, cap].forEach(el => {
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mouseleave', onLeave);
+      el.addEventListener('touchstart',  onTouch);
+    });
+
+    svg.appendChild(bar);
+    svg.appendChild(cap);
+  });
+
+  // ── X axis label ──
+  const xl = svgEl('text', { x: SP.left + SCW / 2, y: SH - 6, 'text-anchor': 'middle',
+    fill: '#6b7a99', 'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+  xl.textContent = 'average hours slept →';
+  svg.appendChild(xl);
+
+  return svg;
+}
+
+/* ─── Chart 3: Caffeine Bar Chart ─── */
+function buildCaffeineChart(entries) {
+  const svg = makeSVG();
+  const groups = [
+    { label: '0 drinks', val: 0, color: '#8b7cf8' },
+    { label: '1 drink',  val: 1, color: '#67e8f9' },
+    { label: '2+ drinks',val: 2, color: '#f9a8d4' },
+  ];
+
+  const data = groups.map(g => {
+    const subset = entries.filter(e => e.caffeine === g.val);
+    return {
+      ...g,
+      count: subset.length,
+      avg: subset.length ? +(subset.reduce((s, e) => s + e.hours, 0) / subset.length).toFixed(2) : 0
+    };
+  });
+
+  const maxVal = Math.max(...data.map(d => d.avg), 9);
+  const yScale = v => PAD.top + CH - (v / (maxVal + 1)) * CH;
+
+  // Draw y-axis only (no x labels — we place them manually under bars)
+  drawAxes(svg, null, 0, Math.ceil(maxVal + 1), 4);
+
+  const spacing = CW / groups.length;
+  const barW = spacing * 0.72; // wider bars, less gap
+
+  data.forEach((d, i) => {
+    const barCX = PAD.left + spacing * i + spacing / 2;
+    const x = barCX - barW / 2;
+    if (d.count === 0) return;
+    const barH = (d.avg / (maxVal + 1)) * CH;
+    const y = PAD.top + CH - barH;
+
+    const rect = svgEl('rect', {
+      x, y, width: barW, height: barH,
+      fill: d.color, opacity: '0.8', rx: '3', class: 'bar-rect bar-anim',
+      style: `animation-delay:${i * 0.12}s`
+    });
+
+    rect.addEventListener('mouseenter', ev => {
+      showTooltip(
+        ttRow('Group', d.label) + ttRow('Avg sleep', d.avg + 'h') + ttRow('Entries', d.count),
+        ev.clientX, ev.clientY
+      );
+    });
+    rect.addEventListener('mouseleave', hideTooltip);
+    rect.addEventListener('touchstart', ev => {
+      const t = ev.touches[0];
+      showTooltip(ttRow('Group', d.label) + ttRow('Avg sleep', d.avg + 'h') + ttRow('Entries', d.count), t.clientX, t.clientY);
+      setTimeout(hideTooltip, 2500);
+    });
+    svg.appendChild(rect);
+
+    // Value label above bar
+    const lbl = svgEl('text', { x: barCX, y: y - 5, 'text-anchor': 'middle', fill: d.color, 'font-size': '12', 'font-weight': '600', 'font-family': 'Syne, sans-serif' });
+    lbl.textContent = d.avg > 0 ? d.avg + 'h' : '';
+    svg.appendChild(lbl);
+
+    // Category label under bar
+    const cat = svgEl('text', { x: barCX, y: PAD.top + CH + 16, 'text-anchor': 'middle', fill: '#6b7a99', 'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+    cat.textContent = d.label;
+    svg.appendChild(cat);
+  });
+
+  return svg;
+}
+
+/* ─── Chart 4: Sleep vs Productivity Bar Chart ─── */
+function buildProductivityChart(entries) {
+  const svg = makeSVG();
+  const ranges = [
+    { label: '<6h',  min: 0,   max: 6   },
+    { label: '6–7h', min: 6,   max: 7   },
+    { label: '7–8h', min: 7,   max: 8   },
+    { label: '8h+',  min: 8,   max: 99  },
+  ];
+
+  const data = ranges.map(r => {
+    const subset = entries.filter(e => e.hours >= r.min && e.hours < r.max);
+    return {
+      ...r,
+      count: subset.length,
+      avg: subset.length ? +(subset.reduce((s, e) => s + e.productivity, 0) / subset.length).toFixed(2) : 0
+    };
+  });
+
+  const maxVal = 5;
+
+  // Draw y-axis only (no x labels — placed manually under bars)
+  drawAxes(svg, null, 0, maxVal, 5);
+
+  const colors = ['#f9a8d4', '#b9a9f5', '#67e8f9', '#6ee7b7'];
+  const spacing = CW / ranges.length;
+  const barW = spacing * 0.72; // wider bars, less gap
+
+  data.forEach((d, i) => {
+    const barCX = PAD.left + spacing * i + spacing / 2;
+    const x = barCX - barW / 2;
+    if (d.count === 0) return;
+    const barH = (d.avg / (maxVal + 0.5)) * CH;
+    const y = PAD.top + CH - barH;
+
+    const rect = svgEl('rect', {
+      x, y, width: barW, height: barH,
+      fill: colors[i], opacity: '0.85', rx: '3', class: 'bar-rect bar-anim',
+      style: `animation-delay:${i * 0.12}s`
+    });
+
+    rect.addEventListener('mouseenter', ev => {
+      showTooltip(
+        ttRow('Range', d.label) + ttRow('Avg prod.', d.avg + '/5') + ttRow('Entries', d.count),
+        ev.clientX, ev.clientY
+      );
+    });
+    rect.addEventListener('mouseleave', hideTooltip);
+    rect.addEventListener('touchstart', ev => {
+      const t = ev.touches[0];
+      showTooltip(ttRow('Range', d.label) + ttRow('Avg prod.', d.avg + '/5') + ttRow('Entries', d.count), t.clientX, t.clientY);
+      setTimeout(hideTooltip, 2500);
+    });
+    svg.appendChild(rect);
+
+    // Value label above bar
+    const lbl = svgEl('text', { x: barCX, y: y - 5, 'text-anchor': 'middle', fill: colors[i], 'font-size': '12', 'font-weight': '600', 'font-family': 'Syne, sans-serif' });
+    lbl.textContent = d.avg > 0 ? d.avg : '';
+    svg.appendChild(lbl);
+
+    // Category label under bar
+    const cat = svgEl('text', { x: barCX, y: PAD.top + CH + 16, 'text-anchor': 'middle', fill: '#6b7a99', 'font-size': '11', 'font-family': 'DM Sans, sans-serif' });
+    cat.textContent = d.label;
+    svg.appendChild(cat);
+  });
+
+  return svg;
+}
+
+/* ════════════════════════════════════════════════════
+   INSIGHTS RENDERER
+════════════════════════════════════════════════════ */
+function renderInsights() {
+  const entries = getEntries();
+  const cont = document.getElementById('insights-content');
+  cont.innerHTML = '';
+
+  if (entries.length < 3) {
+    cont.innerHTML = `
+      <div class="insights-empty">
+        <div class="insights-empty-title">Not enough data yet</div>
+        <div class="insights-empty-sub">Log at least 3 nights to start seeing insights.</div>
+      </div>`;
+    return;
+  }
+
+  const n = entries.length;
+  const avgSleep  = entries.reduce((s,e) => s+e.hours,0) / n;
+  const avgStress = entries.reduce((s,e) => s+e.stress,0) / n;
+  const avgProd   = entries.reduce((s,e) => s+e.productivity,0) / n;
+
+  // Caffeine: high vs none
+  const cafHigh = entries.filter(e => e.caffeine === 2);
+  const cafNone = entries.filter(e => e.caffeine === 0);
+  const avgSleepHighCaf = cafHigh.length ? cafHigh.reduce((s,e)=>s+e.hours,0)/cafHigh.length : null;
+  const avgSleepNoCaf   = cafNone.length ? cafNone.reduce((s,e)=>s+e.hours,0)/cafNone.length : null;
+
+  // Stress vs sleep
+  const hiStress = entries.filter(e => e.stress >= 4);
+  const loStress = entries.filter(e => e.stress <= 2);
+  const avgSleepHi = hiStress.length ? hiStress.reduce((s,e)=>s+e.hours,0)/hiStress.length : null;
+  const avgSleepLo = loStress.length ? loStress.reduce((s,e)=>s+e.hours,0)/loStress.length : null;
+
+  // Productivity sweet spot
+  const rangeData = [
+    { label:'under 6h', min:0, max:6  },
+    { label:'6–7h',     min:6, max:7  },
+    { label:'7–8h',     min:7, max:8  },
+    { label:'8h+',      min:8, max:99 },
+  ].map(r => {
+    const sub = entries.filter(e => e.hours >= r.min && e.hours < r.max);
+    return { ...r, avg: sub.length ? sub.reduce((s,e)=>s+e.productivity,0)/sub.length : 0, count: sub.length };
+  }).filter(r => r.count > 0);
+  const bestRange = rangeData.length ? rangeData.reduce((a,b) => b.avg > a.avg ? b : a) : null;
+
+  // Recent trend
+  const recent = entries.slice(-7), prior = entries.slice(-14,-7);
+  const recentAvg = recent.reduce((s,e)=>s+e.hours,0) / recent.length;
+  const priorAvg  = prior.length ? prior.reduce((s,e)=>s+e.hours,0)/prior.length : null;
+  const trendDelta = priorAvg !== null ? recentAvg - priorAvg : null;
+
+  // Helper to build each block
+  function block(numVal, numUnit, colorClass, label, headline, body) {
+    return `
+      <div class="insight-block">
+        <div class="insight-num ${colorClass}">
+          ${numVal}<span class="insight-num-unit">${numUnit}</span>
+        </div>
+        <div class="insight-text">
+          <div class="insight-label">${label}</div>
+          <div class="insight-headline">${headline}</div>
+          <div class="insight-body">${body}</div>
+        </div>
+      </div>`;
+  }
+
+  // 1. Average sleep
+  const sleepRating = avgSleep >= 8 ? 'above the recommended range' : avgSleep >= 7 ? 'within the recommended range' : 'below the recommended 7–9 hour range';
+  const sleepNote = avgSleep < 7
+    ? 'Your logs suggest sleep is currently more about getting through the week than fully recovering for it.'
+    : 'Consistent sleep at this level supports memory, mood, and immune function.';
+  cont.insertAdjacentHTML('beforeend', block(
+    avgSleep.toFixed(1), 'hrs / night', '',
+    'Average Sleep',
+    `You average <em>${avgSleep.toFixed(1)} hours</em> per night.`,
+    `That is ${sleepRating}. ${sleepNote}`
+  ));
+
+  // 2. Caffeine impact
+  if (avgSleepHighCaf !== null && avgSleepNoCaf !== null) {
+    const diff = Math.abs(avgSleepNoCaf - avgSleepHighCaf).toFixed(1);
+    const better = avgSleepNoCaf > avgSleepHighCaf;
+    cont.insertAdjacentHTML('beforeend', block(
+      diff, 'hrs difference', 'cyan',
+      'Caffeine Impact',
+      better ? `You sleep <em>${diff}h more</em> on low-caffeine days.` : `Caffeine has <em>little effect</em> on your sleep duration.`,
+      `Days with 2+ drinks average ${avgSleepHighCaf.toFixed(1)}h of sleep versus ${avgSleepNoCaf.toFixed(1)}h on caffeine-free days. ${better && +diff > 0.5 ? 'Consider moving your last drink earlier in the afternoon.' : 'Timing may still affect your sleep quality even if duration is similar.'}`
+    ));
+  }
+
+  // 3. Stress vs sleep
+  if (avgSleepHi !== null && avgSleepLo !== null) {
+    const diff = (avgSleepLo - avgSleepHi).toFixed(1);
+    cont.insertAdjacentHTML('beforeend', block(
+      diff, 'hrs lost to stress', 'rose',
+      'Stress & Sleep',
+      `High-stress days cost you <em>${diff} hours</em> of sleep.`,
+      `On low-stress days you average ${avgSleepLo.toFixed(1)}h versus ${avgSleepHi.toFixed(1)}h on high-stress days. Poor sleep and elevated stress feed each other — breaking the cycle usually starts with sleep.`
+    ));
+  }
+
+  // 4. Productivity sweet spot
+  if (bestRange) {
+    cont.insertAdjacentHTML('beforeend', block(
+      bestRange.avg.toFixed(1), '/ 5 productivity', 'mint',
+      'Productivity Sweet Spot',
+      `Your best output follows <em>${bestRange.label}</em> of sleep.`,
+      `Across ${bestRange.count} logged days in that sleep range your average productivity score is ${bestRange.avg.toFixed(1)} out of 5. Use this as your target the night before any high-output day.`
+    ));
+  }
+
+  // 5. Recent trend
+  if (trendDelta !== null) {
+    const dir   = trendDelta > 0.2 ? 'improving' : trendDelta < -0.2 ? 'declining' : 'stable';
+    const col   = trendDelta > 0.2 ? 'mint' : trendDelta < -0.2 ? 'rose' : '';
+    const note  = trendDelta > 0.2
+      ? 'Keep the momentum going — consistency matters more than perfection.'
+      : trendDelta < -0.2
+        ? 'A few small changes — earlier bedtimes, less late caffeine — can reverse this quickly.'
+        : 'Stability is a good sign. Look for small optimisations to push the average higher.';
+    cont.insertAdjacentHTML('beforeend', block(
+      Math.abs(trendDelta).toFixed(1), `hrs ${trendDelta > 0 ? 'gained' : 'lost'}`, col,
+      'Recent Trend (7-day)',
+      `Your sleep is <em>${dir}</em> week over week.`,
+      `Last 7 nights averaged ${recentAvg.toFixed(1)}h compared to ${priorAvg.toFixed(1)}h the week before. ${note}`
+    ));
+  }
+}
+</script>
+</body>
+</html>
